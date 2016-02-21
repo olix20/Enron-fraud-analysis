@@ -74,6 +74,10 @@ pca = RandomizedPCA(n_components=n_components, whiten=True).fit(X_train)
 print "done in %0.3fs" % (time() - t0)
 
 eigenfaces = pca.components_.reshape((n_components, h, w))
+print "pca components: ", pca.components_
+
+import sys
+sys.exit("temp exit")
 
 print "Projecting the input data on the eigenfaces orthonormal basis"
 t0 = time()

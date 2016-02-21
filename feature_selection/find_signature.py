@@ -5,10 +5,18 @@ import numpy
 numpy.random.seed(42)
 
 
+def countAccuracy(list1,list2):
+    count = 0
+    for i in range(0,len(list1)):
+        if list1[i]==list2[i]:
+            count +=1
+
+    return count/float(len(list1))
+
 ### The words (features) and authors (labels), already largely processed.
 ### These files should have been created from the previous (Lesson 10)
 ### mini-project.
-words_file = "../text_learning/your_word_data.pkl" 
+words_file = "../text_learning/your_word_data.pkl"
 authors_file = "../text_learning/your_email_authors.pkl"
 word_data = pickle.load( open(words_file, "r"))
 authors = pickle.load( open(authors_file, "r") )
@@ -38,6 +46,15 @@ labels_train   = labels_train[:150]
 
 
 ### your code goes here
+from sklearn import tree
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(features_train, labels_train)
+pred = clf.predict(features_test)
+print "score: ", clf.score(features_test,labels_test)
+print "accuracy: ", countAccuracy(pred,labels_test)
 
 
-
+for i in range(0,len(clf.feature_importances_)):
+    if clf.feature_importances_[i]>=0.2:
+        print i, clf.feature_importances_[i]
+        print vectorizer.get_feature_names()[i]
