@@ -52,11 +52,11 @@ for key in enron_data.keys():
     if(enron_data[key]['total_payments']=='NaN'):
         totalPayments += 1
 
-print "Total: " ,len(enron_data)
-print "No. POI: " ,count
-print "Salary count: " ,salaryCount
+print "Total data points: " ,len(enron_data)
+print "No. POIs: " ,count
+# print "Salary count: " ,salaryCount
 print "Mail count: " ,mailCount
-print "totalPayments NAN: " ,totalPayments
+# print "totalPayments NAN: " ,totalPayments
 
 
 #print "James Prentice: " , enron_data["PRENTICE JAMES"]['total_stock_value']
@@ -69,8 +69,14 @@ def getMissingValueRatio(data):
     """
     data is a pandas dataframe
     """
-    ratio = len(data[data=='NaN'])/len(data[0])
-    return ratio
+    print "\nPercentage of NaN or 0 values per feature:\n"
+
+    for key in  data.keys():
+        column = data[key]
+        print key, len(column[column==0])*100/float(len(column))
+    # print data[data==0]
+    # ratio = len(data[data==0])/len(data[0])
+    # return ratio
 
 
 feature_1 = "salary"
@@ -106,7 +112,7 @@ keys = ['salary', 'to_messages', 'deferral_payments',
 
 edata = getFeaturesAsPandaDict(enron_data,features_list)
 # edata.to_csv(path_or_buf="./dataDump.csv")
-# print getMissingValueRatio(edata)
+print getMissingValueRatio(edata)
 
 # print getFeaturesAsPandaDict(enron_data,features_list).describe()
 # print edata['salary']
