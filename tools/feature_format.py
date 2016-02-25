@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-""" 
+"""
     A general tool for converting data from the
-    dictionary format to an (n x k) python list that's 
+    dictionary format to an (n x k) python list that's
     ready for training an sklearn algorithm
 
     n--no. of key-value pairs in dictonary
@@ -13,7 +13,7 @@
         key-value pair in the dict is the name
         of a feature, and its value for that person
 
-    In addition to converting a dictionary to a numpy 
+    In addition to converting a dictionary to a numpy
     array, you may want to separate the labels from the
     features--this is what targetFeatureSplit is for
 
@@ -21,7 +21,7 @@
     and the features you want to use are the person's
     salary and bonus, here's what you would do:
 
-    feature_list = ["poi", "salary", "bonus"] 
+    feature_list = ["poi", "salary", "bonus"]
     data_array = featureFormat( data_dictionary, feature_list )
     label, features = targetFeatureSplit(data_array)
 
@@ -32,6 +32,7 @@
 
 
 import numpy as np
+import pandas as pd
 
 def featureFormat( dictionary, features, remove_NaN=True, remove_all_zeroes=True, remove_any_zeroes=False, sort_keys = False):
     """ convert dictionary to numpy array of features
@@ -103,15 +104,15 @@ def featureFormat( dictionary, features, remove_NaN=True, remove_all_zeroes=True
 
 
 def targetFeatureSplit( data ):
-    """ 
+    """
         given a numpy array like the one returned from
         featureFormat, separate out the first feature
-        and put it into its own list (this should be the 
+        and put it into its own list (this should be the
         quantity you want to predict)
 
         return targets and features as separate lists
 
-        (sklearn can generally handle both lists and numpy arrays as 
+        (sklearn can generally handle both lists and numpy arrays as
         input formats when training/predicting)
     """
 
@@ -124,5 +125,20 @@ def targetFeatureSplit( data ):
     return target, features
 
 
+def getFeaturesAsPandaDict(data, features_list):
+    """
+    data should be a list of features we're interested to have
+    """
+    data = featureFormat(data, ["poi"]+features_list )
+    poi, finance_features = targetFeatureSplit( data )
+
+    nparray = np.array(finance_features)
+
+    d={}
+    for i in range(0,len(features_list)):
+        d[features_list[i]] = nparray[:,i]
 
 
+    return pd.DataFrame(d)
+
+    
