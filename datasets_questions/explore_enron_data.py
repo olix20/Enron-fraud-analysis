@@ -73,7 +73,8 @@ def getMissingValueRatio(data):
 
     for key in  data.keys():
         column = data[key]
-        print key, len(column[column==0])*100/float(len(column))
+        a = len(column[column==0])*100/float(len(column))
+        print key, ": %.2f" % a, "%"
     # print data[data==0]
     # ratio = len(data[data==0])/len(data[0])
     # return ratio

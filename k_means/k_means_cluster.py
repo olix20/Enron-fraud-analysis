@@ -86,6 +86,7 @@ print "after scaling: ", scaled_features[0]
 
 # # print [[123.,234.],[12455.,155.],[55.,21566.]]
 # # print scaler.fit_transform([[123.,234.],[12455.,155.],[55.,21566.]])
+print list(xrange(10))
 
 
 
