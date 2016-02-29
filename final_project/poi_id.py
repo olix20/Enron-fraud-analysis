@@ -17,19 +17,11 @@ from sklearn import tree
 ### features_list is a list of strings, each of which is a feature name.
 ### The first feature must be "poi".
 
-# features_list = ['poi','salary', "total_stock_value","total_payments",
-# "shared_receipt_with_poi","restricted_stock","expenses",
-# "exercised_stock_options","total_correspondence_with_poi",
-# "bonus"]
-# print list(xrange(10))
+features_list = ['poi','salary', "total_stock_value","total_payments",
+"shared_receipt_with_poi","restricted_stock","expenses",
+"exercised_stock_options","total_correspondence_with_poi",
+"bonus"]
 
-features_list = ['poi','salary', 'to_messages', 'deferral_payments',
-'total_payments', 'exercised_stock_options', 'bonus',
-'restricted_stock', 'shared_receipt_with_poi',
-'restricted_stock_deferred', 'total_stock_value', 'expenses',
-'loan_advances', 'from_messages',  'from_this_person_to_poi',
-'director_fees', 'deferred_income', 'long_term_incentive',
- 'from_poi_to_this_person']
 
 ### Load the dictionary containing the dataset
 with open("final_project_dataset.pkl", "r") as data_file:
@@ -58,31 +50,24 @@ my_dataset = data_dict
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)
-
-# Scale ..
-
-# selection =  SelectKBest(k=7)
-# # selection.fit(features,labels)
-# # print selection.scores_
-# # print "SelectKBest values: \n" ,selection.get_support()
-# # print
-# #
-# features_selected_list = [x for x, y in zip(features_list[1:], selection.get_support()) if y]
-# print features_selected_list
-# # The 5th feature is not comparable to the first 4 so we'll drop
+# original_features = features
 #
-# pca = PCA(n_components=5)
-# # pca.fit(features)
-# # print "PCA values: \n",(pca.explained_variance_ratio_)
-# There is only 1 significant vector (0.81)
-
-# Build estimator from PCA and Univariate selection:
-# combined_features = FeatureUnion([("pca", PCA(n_components=1)),
-# ("univ_select", SelectKBest(k=4))])
-
-# Use combined features to transform dataset:
-# X_features = combined_features.fit(features, labels).transform(features)
+# ### See how features compare to each other
+# skb = SelectKBest(k=9)
+# skb.fit(features,labels)
+# print "SelectKBest scores for initial features: \n", skb.scores_
 #
+# ### Choose the highest ranking features (4)
+#
+# skb = SelectKBest(k=4)
+# skb.fit(features,labels)
+# features_selected_bool  =  skb.get_support()
+# features_selected_list = [x for x, y in zip(features_list[1:],
+# features_selected_bool ) if y]
+
+## Filter dataset again to include final top features only
+# data = featureFormat(my_dataset, ["poi"]+features_selected_list, sort_keys = True)
+# labels, features = targetFeatureSplit(data)
 
 
 ### Task 4: Try a varity of classifiers
@@ -95,15 +80,37 @@ labels, features = targetFeatureSplit(data)
 
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report
+from sklearn.cross_validation import train_test_split
 
-ada_clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=40))
+
+features_train, features_test, labels_train, labels_test = \
+    train_test_split(features, labels, test_size=0.3, random_state=42)
+
+ada_clf = AdaBoostClassifier(DecisionTreeClassifier())
+ada_clf.fit(features_train,labels_train)
+print "\nAdaboost accuracy:",ada_clf.score(features_test,labels_test)
+print "\nAdaboost performance: \n",\
+classification_report(labels_test, ada_clf.predict(features_test))
+print "\nAdaboost model:\n", ada_clf
+
+
 
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 
 knn_clf = KNeighborsClassifier()
+scaled_features_train = MinMaxScaler().fit_transform(features_train)
+scaled_features_test = MinMaxScaler().fit_transform(features_test)
 
+knn_clf.fit(scaled_features_train,labels_train)
+
+print "\nK-Nearest Neighbors accuracy:",\
+knn_clf.score(scaled_features_test,labels_test)
+print "\nK-Nearest Neighbors performance: \n",\
+classification_report(labels_test, knn_clf.predict(scaled_features_test))
+print "\nK-Nearest Neighbors model:\n", knn_clf
 
 
 
@@ -114,55 +121,76 @@ knn_clf = KNeighborsClassifier()
 ### stratified shuffle split cross validation. For more info:
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
-# Example starting point. Try investigating other evaluation techniques!
-
-# final_features = ['poi','salary', "total_stock_value","restricted_stock",
-# "exercised_stock_options","bonus","total_correspondence_with_poi"]
-# [ True  True False False  True False  True False  True]
-
-# final_features = ["poi"]+features_selected_list
-# data = featureFormat(my_dataset,features_list, sort_keys = True)
-# labels, features = targetFeatureSplit(data)
 
 
-# scaler = MinMaxScaler()
-# features =  scaler.fit_transform(features)
 
-from sklearn.cross_validation import train_test_split
+### KNN Tuning
+## KNN is sensetive to different features scales, so we'll normalize all
+## features to (0,1) first
+
 features_train, features_test, labels_train, labels_test = \
     train_test_split(features, labels, test_size=0.3, random_state=42)
 
+knn_pipeline = Pipeline([("scaler", MinMaxScaler()), ("skb", SelectKBest()),
+("clf", KNeighborsClassifier())])
 
 
-scores = ['precision', 'recall']
-
-## KNN Tuning
-pipeline = Pipeline([("features", SelectKBest()),("scaler", MinMaxScaler()), ("clf", knn_clf)])
-# # # features__pca__n_components=[1], features__univ_select__k=[1, 2,3,4],svm__C=[10],clf__criterion=['gini', 'entropy'],
-#
-#
-knn_param_grid = dict(features__k=range(1, 15),clf__n_neighbors=[1,5,10,15,20],
+knn_param_grid = dict(skb__k=range(1, 4),clf__n_neighbors=[1,2,5,10],
 clf__weights=['uniform','distance'], clf__algorithm=['ball_tree','kd_tree'],
-clf__leaf_size=[1,5,10])
-#
-grid_search = GridSearchCV(pipeline, param_grid=knn_param_grid)
+clf__leaf_size=[1,2,5,10])
+
+grid_search = GridSearchCV(knn_pipeline, param_grid=knn_param_grid,
+scoring="recall",cv=5)
+
 grid_search.fit(features_train, labels_train)
-print "\n KNN best estimator: \n", (grid_search.best_estimator_), "\n best score:\n",grid_search.best_score_ ,"\n best params:\n",grid_search.best_params_
+print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
+"\n best score:\n",grid_search.best_score_ ,\
+"\n best params:\n",grid_search.best_params_
 
 
 clf = grid_search.best_estimator_
-# clf.fit(features_train,labels_train )
-print clf.score(features_test,labels_test)
+
+features_selected_bool  =  clf.named_steps['skb'].get_support()
+features_selected_list = [x for x, y in zip(features_list[1:],
+features_selected_bool ) if y]
+
+print "\nselected features: ", features_selected_list
 
 
-selection =  SelectKBest(k=grid_search.best_params_['features__k'])
-selection.fit(features_train,labels_train)
-features_selected_list = [x for x, y in zip(features_list[1:], selection.get_support()) if y]
 
-clf = KNeighborsClassifier()
+# ### ADABoost Tuning
+# knn_pipeline = Pipeline([("skb", SelectKBest()),
+# ("clf", AdaBoostClassifier(DecisionTreeClassifier()))])
+#
+#
+# knn_param_grid = dict(skb__k=range(1, 9),clf__n_estimators =[1,2,50],
+# clf__algorithm=["SAMME", "SAMME.R"],
+# clf__random_state=[17,1,500])
+#
+# grid_search = GridSearchCV(knn_pipeline, param_grid=knn_param_grid,
+# scoring="recall",cv=5)
+#
+# grid_search.fit(features_train, labels_train)
+# print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
+# "\n best score:\n",grid_search.best_score_ ,\
+# "\n best params:\n",grid_search.best_params_
+#
+#
+# clf = grid_search.best_estimator_
+#
+# features_selected_bool  =  clf.named_steps['skb'].get_support()
+# features_selected_list = [x for x, y in zip(features_list[1:],
+# features_selected_bool ) if y]
+#
+# print "\nselected features: ", features_selected_list
+
+
+
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure
 ### that the version of poi_id.py that you submit can be run on its own and
 ### generates the necessary .pkl files for validating your results.
+
+
 
 dump_classifier_and_data(clf, my_dataset, ["poi"]+features_selected_list)
