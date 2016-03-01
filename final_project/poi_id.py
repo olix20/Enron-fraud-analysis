@@ -50,25 +50,23 @@ my_dataset = data_dict
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)
-# original_features = features
-#
-# ### See how features compare to each other
-# skb = SelectKBest(k=9)
-# skb.fit(features,labels)
-# print "SelectKBest scores for initial features: \n", skb.scores_
-#
-# ### Choose the highest ranking features (4)
-#
-# skb = SelectKBest(k=4)
-# skb.fit(features,labels)
-# features_selected_bool  =  skb.get_support()
-# features_selected_list = [x for x, y in zip(features_list[1:],
-# features_selected_bool ) if y]
 
+## See how features compare to each other
+skb = SelectKBest(k=9)
+skb.fit(features,labels)
+print "SelectKBest scores for initial features: \n", skb.scores_
+
+### Choose the highest ranking features (4)
+
+skb = SelectKBest(k=4)
+skb.fit(features,labels)
+features_selected_bool  =  skb.get_support()
+features_selected_list = [x for x, y in zip(features_list[1:],
+features_selected_bool ) if y]
+features_selected_list = ["poi"]+features_selected_list
 ## Filter dataset again to include final top features only
-# data = featureFormat(my_dataset, ["poi"]+features_selected_list, sort_keys = True)
-# labels, features = targetFeatureSplit(data)
-
+data = featureFormat(my_dataset, features_selected_list, sort_keys=True)
+labels, features = targetFeatureSplit(data)
 
 ### Task 4: Try a varity of classifiers
 ### Please name your classifier clf for easy export below.
@@ -76,23 +74,43 @@ labels, features = targetFeatureSplit(data)
 ### you'll need to use Pipelines. For more info:
 ### http://scikit-learn.org/stable/modules/pipeline.html
 
-# Provided to give you a starting point. Try a variety of classifiers.
-
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report
 from sklearn.cross_validation import train_test_split
+from sklearn.cross_validation import StratifiedShuffleSplit
+
+# features_train, features_test, labels_train, labels_test = \
+#     train_test_split(features, labels, test_size=0.3, random_state=42)
+
+cv = StratifiedShuffleSplit(labels, 100, random_state = 42)
+
+for train_idx, test_idx in cv:
+    features_train = []
+    features_test  = []
+    labels_train   = []
+    labels_test    = []
+    for ii in train_idx:
+        features_train.append( features[ii] )
+        labels_train.append( labels[ii] )
+    for jj in test_idx:
+        features_test.append( features[jj] )
+        labels_test.append( labels[jj] )
 
 
-features_train, features_test, labels_train, labels_test = \
-    train_test_split(features, labels, test_size=0.3, random_state=42)
+# ada_clf = AdaBoostClassifier(DecisionTreeClassifier())
+# ada_clf.fit(features_train,labels_train)
+# print "\nAdaboost accuracy:",ada_clf.score(features_test,labels_test)
+# print "\nAdaboost performance: \n",\
+# classification_report(labels_test, ada_clf.predict(features_test))
+# print "\nAdaboost model:\n", ada_clf
 
-ada_clf = AdaBoostClassifier(DecisionTreeClassifier())
-ada_clf.fit(features_train,labels_train)
-print "\nAdaboost accuracy:",ada_clf.score(features_test,labels_test)
-print "\nAdaboost performance: \n",\
-classification_report(labels_test, ada_clf.predict(features_test))
-print "\nAdaboost model:\n", ada_clf
+tree_clf = DecisionTreeClassifier()
+tree_clf.fit(features_train,labels_train)
+print "\nDecisionTree accuracy:",tree_clf.score(features_test,labels_test)
+print "\nDecisionTree performance: \n",\
+classification_report(labels_test, tree_clf.predict(features_test))
+print "\nDecisionTree model:\n", tree_clf
 
 
 
@@ -128,22 +146,87 @@ print "\nK-Nearest Neighbors model:\n", knn_clf
 ## KNN is sensetive to different features scales, so we'll normalize all
 ## features to (0,1) first
 
-features_train, features_test, labels_train, labels_test = \
-    train_test_split(features, labels, test_size=0.3, random_state=42)
+# # features_train, features_test, labels_train, labels_test = \
+# #     train_test_split(features, labels, test_size=0.3, random_state=42)
+#
+# knn_pipeline = Pipeline([("scaler", MinMaxScaler()), ("skb", SelectKBest()),
+# ("clf", KNeighborsClassifier())])
+#
+#
+# knn_param_grid = dict(skb__k=range(1, 4),clf__n_neighbors=[1,2,5,10],
+# clf__weights=['uniform','distance'], clf__algorithm=['ball_tree','kd_tree'],
+# clf__leaf_size=[1,2,5,10])
+#
+# cv = StratifiedShuffleSplit(
+#         labels_train,
+#          n_iter=100,
+#          random_state=42
+#     )
+#
+# grid_search = GridSearchCV(knn_pipeline, param_grid=knn_param_grid,
+# scoring="recall",cv=cv)
+#
+# grid_search.fit(features_train, labels_train)
+# print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
+# "\n best score:\n",grid_search.best_score_ ,\
+# "\n best params:\n",grid_search.best_params_
 
-knn_pipeline = Pipeline([("scaler", MinMaxScaler()), ("skb", SelectKBest()),
-("clf", KNeighborsClassifier())])
 
 
-knn_param_grid = dict(skb__k=range(1, 4),clf__n_neighbors=[1,2,5,10],
-clf__weights=['uniform','distance'], clf__algorithm=['ball_tree','kd_tree'],
-clf__leaf_size=[1,2,5,10])
+# print features_selected_list
 
-grid_search = GridSearchCV(knn_pipeline, param_grid=knn_param_grid,
-scoring="recall",cv=5)
+### ADABoost Tuning
 
+# ada_pipeline = Pipeline([("skb", SelectKBest()),
+# ("clf", AdaBoostClassifier())])
+#
+# ada_param_grid = dict(skb__k=range(1, 5),
+# clf__n_estimators =[1,17,50],
+# clf__algorithm=["SAMME", "SAMME.R"],
+# clf__random_state=[1,17,42])
+#
+# cv = StratifiedShuffleSplit(
+#         labels_train,
+#          n_iter=100,
+#          random_state=42
+#     )
+#
+# grid_search = GridSearchCV(ada_pipeline, n_jobs=-1,cv=cv,
+# param_grid=ada_param_grid,
+# scoring="recall")
+
+
+
+
+## DecisionTree Tuning
+tree_pipeline = Pipeline([("skb", SelectKBest()),
+("clf", DecisionTreeClassifier())])
+
+tree_param_grid = dict(skb__k=range(1, 5),
+# clf__criterion =['gini','entroy'],
+# clf__max_depth =[None,10,40],
+clf__max_features=['auto',None],
+clf__min_samples_split=[2,4],
+clf__min_samples_leaf =[1,2],
+clf__max_leaf_nodes =[None,50,100]
+
+)
+
+cv = StratifiedShuffleSplit(
+        labels_train,
+         n_iter=100,
+         random_state=42
+    )
+
+grid_search = GridSearchCV(tree_pipeline, n_jobs=-1,cv=cv,
+param_grid=tree_param_grid,
+scoring="recall")
+
+
+
+### Show results of parameter tuning
 grid_search.fit(features_train, labels_train)
-print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
+print "\nbest estimator: \n", (grid_search.best_estimator_),\
 "\n best score:\n",grid_search.best_score_ ,\
 "\n best params:\n",grid_search.best_params_
 
@@ -151,38 +234,10 @@ print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
 clf = grid_search.best_estimator_
 
 features_selected_bool  =  clf.named_steps['skb'].get_support()
-features_selected_list = [x for x, y in zip(features_list[1:],
+features_selected_list = [x for x, y in zip(features_selected_list[1:],
 features_selected_bool ) if y]
 
 print "\nselected features: ", features_selected_list
-
-
-
-# ### ADABoost Tuning
-# knn_pipeline = Pipeline([("skb", SelectKBest()),
-# ("clf", AdaBoostClassifier(DecisionTreeClassifier()))])
-#
-#
-# knn_param_grid = dict(skb__k=range(1, 9),clf__n_estimators =[1,2,50],
-# clf__algorithm=["SAMME", "SAMME.R"],
-# clf__random_state=[17,1,500])
-#
-# grid_search = GridSearchCV(knn_pipeline, param_grid=knn_param_grid,
-# scoring="recall",cv=5)
-#
-# grid_search.fit(features_train, labels_train)
-# print "\n KNN best estimator: \n", (grid_search.best_estimator_),\
-# "\n best score:\n",grid_search.best_score_ ,\
-# "\n best params:\n",grid_search.best_params_
-#
-#
-# clf = grid_search.best_estimator_
-#
-# features_selected_bool  =  clf.named_steps['skb'].get_support()
-# features_selected_list = [x for x, y in zip(features_list[1:],
-# features_selected_bool ) if y]
-#
-# print "\nselected features: ", features_selected_list
 
 
 
